@@ -8,6 +8,10 @@
     <artifactId>AxolotlFerns</artifactId>
     <version>1.0</version>
 
+    <name>Axolotl-Ferns-Core</name>
+    <description>Axolotl Ferns is a framework for developing game servers</description>
+    <url>https://github.com/Axolotl-Ferns</url>
+
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
@@ -32,5 +36,20 @@
             <version>9.2</version>
         </dependency>
     </dependencies>
+
+    <developers>
+        <developer>
+            <id>your-id</id>
+            <name>Антон Кочергин</name>
+            <email>sora.vwv@gmail.com</email>
+            <url>https://github.com/SoraVWV</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/Axolotl-Ferns/Axolotl-Ferns.git</connection>
+        <developerConnection>scm:git:ssh://github.com/Axolotl-Ferns/Axolotl-Ferns.git</developerConnection>
+        <url>https://github.com/Axolotl-Ferns</url>
+    </scm>
 
 </project>
