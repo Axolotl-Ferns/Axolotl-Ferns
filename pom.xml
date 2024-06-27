@@ -6,7 +6,7 @@
 
     <groupId>axl.ferns</groupId>
     <artifactId>ferns-core</artifactId>
-    <version>1.0 dev</version>
+    <version>1.0</version>
 
     <name>Axolotl-Ferns</name>
     <description>Axolotl Ferns is a framework for developing game servers</description>
@@ -44,5 +44,20 @@
             <url>https://github.com/SoraVWV</url>
         </developer>
     </developers>
+
+    <licenses>
+        <license>
+            <name>BSD 3-Clause License</name>
+            <url>https://gitlab.com/uPagge/upagge-utils/-/raw/master/LICENSE</url>
+        </license>
+    </licenses>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub OWNER Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/Axolotl-Ferns/Axolotl-Ferns</url>
+        </repository>
+    </distributionManagement>
 
 </project>
