@@ -4,9 +4,10 @@ import axl.ferns.network.handler.PacketHandler;
 import axl.ferns.network.packet.DataPacket;
 import axl.ferns.network.secure.Secure;
 import axl.ferns.network.secure.XORSecure;
-import axl.ferns.server.event.*;
 import axl.ferns.server.event.EventListener;
-import axl.ferns.server.event.player.PlayerDisconnectEvent;
+import axl.ferns.server.event.*;
+import axl.ferns.server.event.player.PlayersLoadEvent;
+import axl.ferns.server.event.player.PlayersSaveEvent;
 import axl.ferns.server.event.server.ServerTickEvent;
 import axl.ferns.server.player.Player;
 import axl.ferns.server.player.PlayerCodegen;
@@ -59,6 +60,7 @@ public final class Server {
 
         new Thread(this::loadNetwork).start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            savePlayers();
             close = true;
         }));
 
@@ -73,7 +75,7 @@ public final class Server {
     private final ExecutorService executor;
 
     @Getter
-    private final List<Player> players = new ArrayList<>();
+    private List<Player> players = new ArrayList<>();
 
     private final List<Class<? extends PlayerInterface>> playerInterfaces = new ArrayList<>();
 
@@ -105,30 +107,14 @@ public final class Server {
     private final List<ServiceBase> services = new ArrayList<>();
 
     private void loadPlayers() {
-        {
-            Player player = newPlayer();
-            player.setToken("[test-token-1]");
-            player.setId(0);
-            player.setKey(new byte[]{0x20, -0x34, 0x23, 0x54, -0x23, 0x54, 0x00, -0x37});
-            player.setNickname("Tester 1");
-            this.players.add(player);
-        }
-        {
-            Player player = newPlayer();
-            player.setToken("[test-token-2]");
-            player.setId(1);
-            player.setKey(new byte[]{0x20, -0x34, 0x23, 0x54, -0x23, 0x54, 0x00, -0x37});
-            player.setNickname("Tester 2");
-            this.players.add(player);
-        }
-
-        // TODO
-
+        PlayersLoadEvent event = new PlayersLoadEvent();
+        callEvent(event);
+        this.players.addAll(event.getPlayers());
         Runtime.getRuntime().addShutdownHook(new Thread(this::savePlayers));
     }
 
     private void savePlayers() {
-        // TODO
+        callEvent(new PlayersSaveEvent());
     }
 
     private void loadServices(List<ServiceBase> services) {
@@ -235,16 +221,6 @@ public final class Server {
             throw new IllegalStateException("The server was not initialized");
 
         return instance;
-    }
-
-    public void disconnect(Player player, String reason) {
-        if (player.isOnline()) {
-            PlayerDisconnectEvent playerDisconnectEvent = new PlayerDisconnectEvent(player, reason);
-            this.callEvent(playerDisconnectEvent);
-            player.disconnect(playerDisconnectEvent.getReason());
-        }
-
-        players.remove(player);
     }
 
     public Player getPlayerById(int playerId) {

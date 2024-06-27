@@ -13,8 +13,4 @@ public @interface PlayerField {
 
     Class<?> type();
 
-    boolean isStatic() default false;
-
-    boolean isVolatile() default false;
-
 }

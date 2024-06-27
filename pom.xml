@@ -6,7 +6,7 @@
 
     <groupId>axl.ferns</groupId>
     <artifactId>ferns-core</artifactId>
-    <version>1.0</version>
+    <version>1.0 dev</version>
 
     <name>Axolotl-Ferns</name>
     <description>Axolotl Ferns is a framework for developing game servers</description>
