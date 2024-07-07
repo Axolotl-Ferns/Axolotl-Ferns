@@ -3,11 +3,14 @@ package axl.ferns.server.player;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static org.objectweb.asm.Type.getType;
 
 public class PlayerCodegen {
 
@@ -45,7 +48,7 @@ public class PlayerCodegen {
             mv.visitEnd();
 
             classWriter.visitEnd();
-            return (Class<? extends Player>) new PlayerClassLoader().defineClass("axl.server.player.GeneratedPlayer", classWriter.toByteArray());
+            return (Class<? extends Player>) new PlayerClassLoader().defineClass("axl.ferns.server.player.GeneratedPlayer", classWriter.toByteArray());
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -65,7 +68,7 @@ public class PlayerCodegen {
         mv.visitCode();
         mv.visitVarInsn(Opcodes.ALOAD, 0);
         mv.visitFieldInsn(Opcodes.GETFIELD, className, fieldName, fieldDescriptor);
-        mv.visitInsn(org.objectweb.asm.Type.getType(fieldDescriptor).getOpcode(Opcodes.IRETURN));
+        mv.visitInsn(getType(fieldDescriptor).getOpcode(Opcodes.IRETURN));
         mv.visitMaxs(0, 0);
         mv.visitEnd();
     }
@@ -74,10 +77,26 @@ public class PlayerCodegen {
         PlayerSetter setter = method.getAnnotation(PlayerSetter.class);
         String fieldName = setter.name();
         String fieldDescriptor = getTypeDescriptor(method.getParameterTypes()[0]);
+
+        String returnDescriptor = getTypeDescriptor(method.getReturnType());
+        if (Player.class.isAssignableFrom(method.getReturnType()) || PlayerInterface.class.isAssignableFrom(method.getReturnType())) {
+            MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, method.getName(), "(" + fieldDescriptor + ")" + returnDescriptor, null, null);
+            mv.visitCode();
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitVarInsn(getType(fieldDescriptor).getOpcode(Opcodes.ILOAD), 1);
+            mv.visitFieldInsn(Opcodes.PUTFIELD, className, fieldName, fieldDescriptor);
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(method.getReturnType()));
+            mv.visitInsn(Opcodes.ARETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+            return;
+        }
+
         MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC, method.getName(), "(" + fieldDescriptor + ")V", null, null);
         mv.visitCode();
         mv.visitVarInsn(Opcodes.ALOAD, 0);
-        mv.visitVarInsn(org.objectweb.asm.Type.getType(fieldDescriptor).getOpcode(Opcodes.ILOAD), 1);
+        mv.visitVarInsn(getType(fieldDescriptor).getOpcode(Opcodes.ILOAD), 1);
         mv.visitFieldInsn(Opcodes.PUTFIELD, className, fieldName, fieldDescriptor);
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);

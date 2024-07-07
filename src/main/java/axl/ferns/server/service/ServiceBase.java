@@ -6,7 +6,7 @@ public abstract class ServiceBase {
 
     public abstract void onEnable();
 
-    public abstract void onDisable();
+    public void onDisable() {};
 
     public final Priority priority() {
         Service service = this.getClass().getAnnotation(Service.class);

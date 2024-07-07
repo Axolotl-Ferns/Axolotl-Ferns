@@ -24,7 +24,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,7 +45,7 @@ public final class Server {
     private static Server instance;
 
     @SneakyThrows
-    public Server(List<ServiceBase> services, int port, int threadPoolSize, int ticksPerSecond) throws SocketException {
+    public Server(List<ServiceBase> services, int port, int threadPoolSize, int ticksPerSecond) {
         Server.instance = this;
         this.port = port;
         this.threadPoolSize = threadPoolSize;
@@ -75,7 +74,7 @@ public final class Server {
     private final ExecutorService executor;
 
     @Getter
-    private List<Player> players = new ArrayList<>();
+    private final List<Player> players = new ArrayList<>();
 
     private final List<Class<? extends PlayerInterface>> playerInterfaces = new ArrayList<>();
 
@@ -87,7 +86,7 @@ public final class Server {
     private Constructor<? extends Player> playerConstructor;
 
     @SneakyThrows
-    private Player newPlayer() {
+    public Player newPlayer() {
         return playerConstructor.newInstance();
     }
 
@@ -100,12 +99,6 @@ public final class Server {
     @Setter
     private Secure secure = new XORSecure();
 
-    @Getter
-    private final List<PacketHandler> packetHandlers = new ArrayList<>();
-
-    @Getter
-    private final List<ServiceBase> services = new ArrayList<>();
-
     private void loadPlayers() {
         PlayersLoadEvent event = new PlayersLoadEvent();
         callEvent(event);
@@ -117,23 +110,37 @@ public final class Server {
         callEvent(new PlayersSaveEvent());
     }
 
+    @Getter
+    private final List<ServiceBase> services = new ArrayList<>();
+
     private void loadServices(List<ServiceBase> services) {
+        if (services == null || services.isEmpty())
+            return;
+
         services.forEach((service) -> {
             Service serviceAnnotation = service.getClass().getAnnotation(Service.class);
             if (serviceAnnotation == null)
-                return;
+                throw new IllegalArgumentException("Service \"" + service.getClass().getName() + "\" does not have an @axl.ferns.server.service.Service annotation");
 
-            System.out.println("[SERVICES] Load service " + serviceAnnotation.name() + " " + serviceAnnotation.version());
             this.services.add(service);
         });
 
         services.sort(Comparator.comparing(ServiceBase::priority));
 
-        this.services.forEach(ServiceBase::onEnable);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> this.services.forEach(ServiceBase::onDisable)));
+        this.services.forEach(ServiceBase::onEnable);
     }
 
-    private HashMap<Short, Supplier<DataPacket>> packets = new HashMap<>();
+    public ServiceBase getService(Class<? extends ServiceBase> service) {
+        for (ServiceBase base: services)
+            if (base.getClass().isAssignableFrom(service))
+                return base;
+
+        return null;
+    }
+
+    @Getter
+    private final HashMap<Short, Supplier<DataPacket>> packets = new HashMap<>();
 
     public Server registerPacket(Short PID, Supplier<DataPacket> constructor) {
         if (packets.containsKey(PID))
@@ -143,11 +150,14 @@ public final class Server {
         return this;
     }
 
-    private void registerHandler(Handler handler) {
+    @Getter
+    private final List<PacketHandler> packetHandlers = new ArrayList<>();
+
+    public Server registerHandler(Handler handler) {
         if (handler instanceof PacketHandler)
             this.packetHandlers.add((PacketHandler) handler);
 
-        // TODO other handlers
+        return this;
     }
 
     private void loadNetwork() {
@@ -155,7 +165,6 @@ public final class Server {
             while (!close) {
                 DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
                 this.socket.receive(packet);
-
 
                 executor.execute(() -> {
                     for (PacketHandler packetHandler : getPacketHandlers())
