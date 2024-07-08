@@ -1,5 +1,6 @@
 package axl.ferns.server.player;
 
+import lombok.Getter;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
@@ -14,14 +15,65 @@ import static org.objectweb.asm.Type.getType;
 
 public class PlayerCodegen {
 
-    public Class<? extends Player> codegenAdditions(List<Class<? extends PlayerInterface>> additions) {
+    @Getter
+    private final PlayerClassLoader loader = new PlayerClassLoader();
+
+    private final String PLAYER_INTERNAL = "axl/ferns/server/player/Player";
+    private final String PLAYER_GENERATED_INTERNAL = "axl/ferns/server/player/GeneratedPlayer";
+
+    private final String PLAYER_CONSTRUCTOR_INTERNAL = "axl/ferns/server/player/PlayerConstructor";
+    private final String GENERATED_PLAYER_CONSTRUCTOR_INTERNAL = "axl/ferns/server/player/GeneratedPlayerConstructor";
+
+    public PlayerConstructor codegenAdditions(List<Class<? extends PlayerInterface>> additions) {
+
+        Class<? extends Player> player = generatePlayer(additions);
+        if (player == null)
+            return null;
+
+        try {
+            ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+            String newClassName = GENERATED_PLAYER_CONSTRUCTOR_INTERNAL;
+            String[] interfaces = new String[]{PLAYER_CONSTRUCTOR_INTERNAL};
+            classWriter.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, newClassName, null, "java/lang/Object", interfaces);
+
+            MethodVisitor mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+            mv.visitCode();
+            mv.visitVarInsn(Opcodes.ALOAD, 0);
+            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+            mv.visitInsn(Opcodes.RETURN);
+            mv.visitMaxs(1, 1);
+            mv.visitEnd();
+
+            mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC, "newInstance", "()L" + PLAYER_INTERNAL + ";", null, null);
+            mv.visitCode();
+            mv.visitTypeInsn(Opcodes.NEW, PLAYER_GENERATED_INTERNAL);
+            mv.visitInsn(Opcodes.DUP);
+            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, PLAYER_GENERATED_INTERNAL, "<init>", "()V", false);
+            mv.visitTypeInsn(Opcodes.CHECKCAST, PLAYER_INTERNAL);
+            mv.visitInsn(Opcodes.ARETURN);
+            mv.visitMaxs(2, 1);
+            mv.visitEnd();
+
+            classWriter.visitEnd();
+            Class<? extends PlayerConstructor> playerConstructor = (Class<? extends PlayerConstructor>) loader.defineClass(GENERATED_PLAYER_CONSTRUCTOR_INTERNAL.replace("/", "."), classWriter.toByteArray());
+            if (playerConstructor == null)
+                return null;
+
+            return playerConstructor.getConstructor().newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private Class<? extends Player> generatePlayer(List<Class<? extends PlayerInterface>> additions) {
         try {
             Set<Class<?>> interfacesToImplement = new HashSet<>(additions);
 
             ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-            String newClassName = "axl/ferns/server/player/GeneratedPlayer";
+            String newClassName = PLAYER_GENERATED_INTERNAL;
             String[] interfaces = interfacesToImplement.stream().map(aInterface -> aInterface.getName().replace('.', '/')).toArray(String[]::new);
-            classWriter.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, newClassName, null, "axl/ferns/server/player/Player", interfaces);
+            classWriter.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC, newClassName, null, PLAYER_INTERNAL, interfaces);
 
             for (Class<? extends PlayerInterface> additionClass : additions) {
                 if (additionClass.isAnnotationPresent(PlayerAdditions.class)) {
@@ -42,13 +94,13 @@ public class PlayerCodegen {
             MethodVisitor mv = classWriter.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
             mv.visitCode();
             mv.visitVarInsn(Opcodes.ALOAD, 0);
-            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, "axl/ferns/server/player/Player", "<init>", "()V", false);
+            mv.visitMethodInsn(Opcodes.INVOKESPECIAL, PLAYER_INTERNAL, "<init>", "()V", false);
             mv.visitInsn(Opcodes.RETURN);
             mv.visitMaxs(1, 1);
             mv.visitEnd();
 
             classWriter.visitEnd();
-            return (Class<? extends Player>) new PlayerClassLoader().defineClass("axl.ferns.server.player.GeneratedPlayer", classWriter.toByteArray());
+            return (Class<? extends Player>) loader.defineClass(PLAYER_GENERATED_INTERNAL.replace("/", "."), classWriter.toByteArray());
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -104,14 +156,6 @@ public class PlayerCodegen {
     }
 
     private String getTypeDescriptor(Class<?> clazz) {
-        if (clazz == Integer.class) return "I";
-        if (clazz == Boolean.class) return "Z";
-        if (clazz == Short.class) return "S";
-        if (clazz == Long.class) return "J";
-        if (clazz == Double.class) return "D";
-        if (clazz == Float.class) return "F";
-        if (clazz == Byte.class) return "B";
-        if (clazz == Character.class) return "C";
         return org.objectweb.asm.Type.getDescriptor(clazz);
     }
 

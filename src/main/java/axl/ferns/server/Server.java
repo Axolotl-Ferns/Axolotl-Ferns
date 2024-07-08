@@ -11,6 +11,7 @@ import axl.ferns.server.event.player.PlayersSaveEvent;
 import axl.ferns.server.event.server.ServerTickEvent;
 import axl.ferns.server.player.Player;
 import axl.ferns.server.player.PlayerCodegen;
+import axl.ferns.server.player.PlayerConstructor;
 import axl.ferns.server.player.PlayerInterface;
 import axl.ferns.server.service.Service;
 import axl.ferns.server.service.ServiceBase;
@@ -20,7 +21,6 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -28,7 +28,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
-import java.util.logging.Handler;
 
 public final class Server {
 
@@ -83,7 +82,7 @@ public final class Server {
         return this;
     }
 
-    private Constructor<? extends Player> playerConstructor;
+    private PlayerConstructor playerConstructor;
 
     @SneakyThrows
     public Player newPlayer() {
@@ -92,7 +91,7 @@ public final class Server {
 
     @SneakyThrows
     private void generatePlayer() {
-        this.playerConstructor = new PlayerCodegen().codegenAdditions(playerInterfaces).getConstructor();
+        this.playerConstructor = new PlayerCodegen().codegenAdditions(playerInterfaces);
     }
 
     @Getter
@@ -153,10 +152,8 @@ public final class Server {
     @Getter
     private final List<PacketHandler> packetHandlers = new ArrayList<>();
 
-    public Server registerHandler(Handler handler) {
-        if (handler instanceof PacketHandler)
-            this.packetHandlers.add((PacketHandler) handler);
-
+    public Server registerPacketHandler(PacketHandler handler) {
+        this.packetHandlers.add(handler);
         return this;
     }
 
